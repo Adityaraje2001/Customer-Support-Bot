@@ -2,9 +2,13 @@ import ChatInterface from '../components/ChatInterface';
 
 export default function Home() {
   return (
-    <main className="flex min-h-screen flex-col items-center justify-between p-24">
-      <div className="z-10 max-w-5xl w-full items-center justify-between font-mono text-sm">
-        <h1 className="text-4xl font-bold text-center mb-8">AI Customer Support Agent</h1>
+    <main className="min-h-screen bg-gray-100 flex flex-col items-center justify-center p-4">
+      <div className="w-full max-w-4xl text-center mb-8">
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">AI Customer Support</h1>
+        <p className="text-gray-600">How can we help you today?</p>
+      </div>
+      
+      <div className="w-full">
         <ChatInterface />
       </div>
     </main>

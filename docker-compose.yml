@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   backend:
     build:
@@ -8,10 +6,8 @@ services:
       - "8000:8000"
     volumes:
       - ./backend:/app
-    environment:
-      - GROQ_API_KEY=${GROQ_API_KEY}
     env_file:
-      - ./backend/.env.example
+      - ./backend/.env
 
   frontend:
     build:
@@ -22,6 +18,6 @@ services:
       - ./frontend:/app
       - /app/node_modules
     environment:
-      - NEXT_PUBLIC_API_URL=http://backend:8000
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
     depends_on:
       - backend
