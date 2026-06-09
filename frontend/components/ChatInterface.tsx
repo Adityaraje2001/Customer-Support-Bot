@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { Message } from '../types/chat.types';
 import { ChatService } from '../services/chat.service';
 
@@ -9,21 +9,25 @@ export default function ChatInterface() {
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Generate a stable session_id per component mount so the backend
+  // can link all messages in a single conversation together.
+  const sessionId = useMemo(() => crypto.randomUUID(), []);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Auto-scroll to bottom when messages change
-  const scrollToBottom = () => {
+  // Auto-scroll to bottom when messages change (including each new token)
+  const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
+  }, []);
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages, isLoading]);
+  }, [messages, isLoading, scrollToBottom]);
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!inputValue.trim() || isLoading) return;
 
+    // ── 1. Add the user's message to the chat ──
     const userMessage: Message = {
       id: Date.now().toString(),
       role: 'user',
@@ -31,24 +35,62 @@ export default function ChatInterface() {
       createdAt: new Date(),
     };
 
-    setMessages((prev) => [...prev, userMessage]);
+    // Generate a unique ID for the assistant's response message.
+    // We create the placeholder now so we can update it as tokens arrive.
+    const assistantMessageId = (Date.now() + 1).toString();
+
+    setMessages((prev) => [
+      ...prev,
+      userMessage,
+      // ── 2. Add an empty assistant placeholder with isStreaming=true ──
+      // This shows up immediately in the chat with a blinking cursor,
+      // giving the user instant visual feedback that a response is coming.
+      {
+        id: assistantMessageId,
+        role: 'assistant',
+        content: '',
+        createdAt: new Date(),
+        isStreaming: true,
+      },
+    ]);
+
     setInputValue('');
     setIsLoading(true);
     setError(null);
 
     try {
-      const response = await ChatService.sendMessage({ message: userMessage.content });
-      
-      const assistantMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        role: 'assistant',
-        content: response.response,
-        createdAt: new Date(),
-      };
+      // ── 3. Start streaming — each token updates the placeholder ──
+      await ChatService.sendMessageStream(
+        { message: userMessage.content, session_id: sessionId },
+        (chunk: string) => {
+          // This callback fires for every token the backend sends.
+          // We use a functional state update to append the new chunk
+          // to the existing content of the assistant message.
+          setMessages((prev) =>
+            prev.map((msg) =>
+              msg.id === assistantMessageId
+                ? { ...msg, content: msg.content + chunk }
+                : msg
+            )
+          );
+        }
+      );
 
-      setMessages((prev) => [...prev, assistantMessage]);
+      // ── 4. Streaming complete — remove the streaming cursor ──
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg.id === assistantMessageId
+            ? { ...msg, isStreaming: false }
+            : msg
+        )
+      );
     } catch (err) {
+      // ── 5. On error, remove the empty placeholder and show error ──
+      setMessages((prev) =>
+        prev.filter((msg) => msg.id !== assistantMessageId)
+      );
       setError('Something went wrong. Please try again.');
+      console.error('Streaming error:', err);
     } finally {
       setIsLoading(false);
     }
@@ -81,21 +123,14 @@ export default function ChatInterface() {
                       : 'bg-white border border-gray-200 text-gray-800 rounded-bl-none shadow-sm'
                   }`}
                 >
+                  {/* Message text + optional streaming cursor */}
                   {msg.content}
+                  {msg.isStreaming && (
+                    <span className="streaming-cursor" aria-hidden="true" />
+                  )}
                 </div>
               </div>
             ))}
-            
-            {/* Loading Indicator */}
-            {isLoading && (
-              <div className="flex justify-start">
-                <div className="bg-white border border-gray-200 text-gray-500 rounded-2xl rounded-bl-none px-4 py-2 shadow-sm flex items-center space-x-2">
-                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
-                </div>
-              </div>
-            )}
             
             {/* Error Message */}
             {error && (
@@ -131,3 +166,4 @@ export default function ChatInterface() {
     </div>
   );
 }
+
