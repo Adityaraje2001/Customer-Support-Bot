@@ -9,4 +9,5 @@ class ChatRequest(BaseModel):
 
 class ChatResponse(BaseModel):
     response: str
+    session_id: str | None = None
     agent_used: str | None = None

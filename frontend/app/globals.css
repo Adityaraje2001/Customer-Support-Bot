@@ -5,3 +5,22 @@
 body {
   @apply bg-gray-100 text-gray-900 antialiased;
 }
+
+/* ─── Streaming cursor ───────────────────────────
+   Blinking caret shown at the end of assistant messages
+   while tokens are still arriving from the backend.
+   ─────────────────────────────────────────────── */
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+.streaming-cursor {
+  display: inline-block;
+  width: 2px;
+  height: 1em;
+  background-color: currentColor;
+  margin-left: 2px;
+  animation: blink 0.7s step-end infinite;
+  vertical-align: text-bottom;
+}
