@@ -27,6 +27,7 @@ jobs:
     env:
       # ── Fake credentials so imports that call os.environ.get() don't fail ──
       GROQ_API_KEY: "ci-placeholder-not-a-real-key"
+      GROQ_MODEL: "llama3-8b-8192"
       DATABASE_URL: "sqlite:///./test_support_agent.db"
       VECTOR_STORE_PATH: "./vectorstore"
       DATABRICKS_HOST: "https://ci-placeholder.azuredatabricks.net"
