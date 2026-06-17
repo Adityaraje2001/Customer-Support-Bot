@@ -34,6 +34,13 @@ _chroma_patcher.start()
 import pytest
 from fastapi.testclient import TestClient
 from app.main import app
+from app.auth.dependencies import get_current_user
+from app.models.user import User
+
+def override_get_current_user():
+    return User(id=1, email="test@test.com", username="testuser", role="customer")
+
+app.dependency_overrides[get_current_user] = override_get_current_user
 
 
 @pytest.fixture(autouse=True)

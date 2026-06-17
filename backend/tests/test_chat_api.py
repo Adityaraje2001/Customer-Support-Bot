@@ -43,7 +43,8 @@ def test_chat_success(client, mocker):
     mock_graph.invoke.assert_called_once_with({
         "question": "Rewritten question",
         "history": [],
-        "session_id": "session-123"
+        "session_id": "session-123",
+        "user_id": 1
     })
     assert mock_memory.add_message.call_count == 2
 

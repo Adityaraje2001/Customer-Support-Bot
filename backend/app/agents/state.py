@@ -7,3 +7,4 @@ class AgentState(TypedDict):
     route: str
     answer: str
     session_id: str
+    user_id: int

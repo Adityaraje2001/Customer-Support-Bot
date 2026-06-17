@@ -67,6 +67,7 @@ class IngestionPipeline:
         self,
         pdf_path: str,
         document_id: str | None = None,
+        user_id: int | None = None,
     ) -> dict[str, Any]:
         """Ingest a single PDF document into the vector store.
 
@@ -201,6 +202,9 @@ class IngestionPipeline:
                     "page": page_number,
                     "chunk": chunk_number,
                 }
+
+                if user_id is not None:
+                    metadata["user_id"] = user_id
 
                 try:
                     self.vectorstore.add(

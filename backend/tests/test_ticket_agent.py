@@ -43,7 +43,8 @@ def test_create_ticket(ticket_agent, mock_ticket_service):
     assert "created successfully" in response
     mock_ticket_service.create_ticket.assert_called_once_with(
         session_id="session-123",
-        question="I need help with my account"
+        question="I need help with my account",
+        user_id=None
     )
 
 

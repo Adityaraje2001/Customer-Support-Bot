@@ -11,7 +11,8 @@ class TicketAgent:
     def run(
         self,
         question: str,
-        session_id: str
+        session_id: str,
+        user_id: int = None
     ):
         question_lower = question.lower()
 
@@ -53,7 +54,8 @@ class TicketAgent:
 
         return self.create_ticket(
             question=question,
-            session_id=session_id
+            session_id=session_id,
+            user_id=user_id
         )
 
     # =====================================================
@@ -124,11 +126,13 @@ class TicketAgent:
     def create_ticket(
         self,
         question: str,
-        session_id: str
+        session_id: str,
+        user_id: int = None
     ):
         ticket = self.ticket_service.create_ticket(
             session_id=session_id,
-            question=question
+            question=question,
+            user_id=user_id
         )
 
         return (

@@ -103,7 +103,8 @@ def ticket_node(state):
 
     answer = ticket_agent.run(
         question=state["question"],
-        session_id=state["session_id"]
+        session_id=state["session_id"],
+        user_id=state.get("user_id")
     )
 
     return {

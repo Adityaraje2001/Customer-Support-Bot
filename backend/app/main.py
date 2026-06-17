@@ -1,43 +1,61 @@
+"""AI Customer Support Agent — FastAPI application entry point."""
+from contextlib import asynccontextmanager
+from pathlib import Path
+
+from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
-from dotenv import load_dotenv
-from pathlib import Path
-from groq import Groq
-import os
-from app.services.llm_service import LLMService
+
 from app.api.router import router
 
+# ---------------------------------------------------------------------------
+# Environment
+# ---------------------------------------------------------------------------
 env_path = Path(__file__).resolve().parent.parent / ".env"
 load_dotenv(dotenv_path=env_path)
-client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
+
+
+# ---------------------------------------------------------------------------
+# Lifespan — replaces deprecated @app.on_event("startup")
+# ---------------------------------------------------------------------------
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Run one-time startup tasks (DB table creation)."""
+    from app.database.database import Base, engine
+    from app.models.ticket import Ticket         # noqa: F401 — registers model
+    from app.models.chat_message import ChatMessage  # noqa: F401
+    from app.models.user import User             # noqa: F401
+    Base.metadata.create_all(bind=engine)
+    yield
+
+
+# ---------------------------------------------------------------------------
+# Application
+# ---------------------------------------------------------------------------
 app = FastAPI(
     title="AI Customer Support Agent API",
     description="Backend API for AI Customer Support Agent",
-    version="0.1.0"
+    version="0.1.0",
+    lifespan=lifespan,
 )
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allow frontend origin
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
+
 @app.get("/")
 async def root():
     return {"message": "Welcome to AI Customer Support Agent API"}
 
-@app.on_event("startup")
-def on_startup():
-    from app.database.database import Base, engine
-    from app.models.ticket import Ticket  # noqa: F401 — registers model with Base
-    from app.models.chat_message import ChatMessage  # noqa: F401 — registers model with Base
-    Base.metadata.create_all(bind=engine)
 
 app.include_router(router, prefix="/api")
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="[IP_ADDRESS]", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=8000)
+
