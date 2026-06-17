@@ -1,9 +1,9 @@
-from typing import TypedDict, Annotated, Sequence
-import operator
+from typing import TypedDict
 
-# Define the state graph schema for LangGraph
-# TODO: Add required state attributes like user_id, history, current_agent
 
 class AgentState(TypedDict):
-    messages: Annotated[Sequence[str], operator.add]
-    next_node: str
+    question: str
+    history: list
+    route: str
+    answer: str
+    session_id: str

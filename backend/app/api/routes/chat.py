@@ -1,82 +1,138 @@
-'''Chat API routes with SQLite-backed conversation memory.'''
+"""Chat API routes with SQLite-backed conversation memory."""
 
+import uuid
 
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
-from app.services.llm_service import LLMService
+
 from app.schemas.chat import ChatRequest, ChatResponse
 from app.memory.memory_manager import MemoryManager
-import uuid
+from app.services.llm_service import LLMService
+from app.services.question_rewriter import QuestionRewriter
+from app.workflows.support_workflow import graph
+
 
 router = APIRouter()
+
+# =====================================================
+# Shared Services
+# =====================================================
+
 llm_service = LLMService()
+
+question_rewriter = QuestionRewriter(
+    llm_service=llm_service
+)
+
 memory = MemoryManager()
 
 
-# ──────────────────────────────────────────────
-# Non-streaming endpoint — returns full response as JSON
-# ──────────────────────────────────────────────
+# =====================================================
+# Chat Endpoint
+# =====================================================
+
 @router.post("/chat", response_model=ChatResponse)
 async def chat(request: ChatRequest):
     try:
-        # Use existing session_id or generate a new one
+        # Create or reuse session
         session_id = request.session_id or str(uuid.uuid4())
 
-        # Load past conversation from SQLite
+        # Load conversation history
         history = memory.get_history(session_id)
 
-        # Get LLM response with full conversation context
-        response_text = llm_service.get_response(request.message, history=history)
+        # Rewrite follow-up questions into standalone queries
+        rewritten_question = question_rewriter.rewrite_query(
+            request.message,
+            history
+        )
 
-        # Persist both the user's message and the assistant's reply
-        memory.add_message(session_id=session_id, role="user", content=request.message)
-        memory.add_message(session_id=session_id, role="assistant", content=response_text)
+        # Run LangGraph workflow
+        result = graph.invoke(
+            {
+                "question": rewritten_question,
+                "history": history,
+                "session_id": session_id
+            }
+        )
+
+        response_text = result["answer"]
+
+        # Save original user message
+        memory.add_message(
+            session_id=session_id,
+            role="user",
+            content=request.message
+        )
+
+        # Save assistant response
+        memory.add_message(
+            session_id=session_id,
+            role="assistant",
+            content=response_text
+        )
 
         return ChatResponse(
             response=response_text,
-            session_id=session_id,
+            session_id=session_id
         )
+
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(
+            status_code=500,
+            detail=str(e)
+        )
 
 
-# ──────────────────────────────────────────────
-# Streaming endpoint — returns tokens as SSE stream
-# ──────────────────────────────────────────────
+# =====================================================
+# Streaming Endpoint (Legacy)
+# =====================================================
+
 @router.post("/chat/stream")
 async def chat_stream(request: ChatRequest):
     """
-    Stream the LLM response token-by-token using Server-Sent Events (SSE).
+    Legacy streaming endpoint.
 
-    The response is a text/event-stream where each event is:
-      data: <token>
-
-    The stream ends with:
-      data: [DONE]
+    Frontend currently uses /chat.
+    This endpoint is retained for future LangGraph streaming support.
     """
+
     session_id = request.session_id or str(uuid.uuid4())
+
     history = memory.get_history(session_id)
 
-    # Save the user message before streaming starts
-    memory.add_message(session_id=session_id, role="user", content=request.message)
+    memory.add_message(
+        session_id=session_id,
+        role="user",
+        content=request.message
+    )
 
     async def _generate():
-        """Wraps the LLM stream to collect the full response and save it afterwards."""
-        collected_tokens: list[str] = []
 
-        async for chunk in llm_service.stream_response(request.message, history=history):
-            # Extract raw token text from the SSE envelope ("data: <token>\n\n")
-            if chunk.startswith("data: ") and chunk.strip() not in (
-                "data: [DONE]",
-            ) and not chunk.strip().startswith("data: [ERROR]"):
-                collected_tokens.append(chunk[6:].rstrip("\n"))
+        collected_tokens = []
+
+        async for chunk in llm_service.stream_response(
+            request.message,
+            history=history
+        ):
+
+            if (
+                chunk.startswith("data: ")
+                and chunk.strip() != "data: [DONE]"
+                and not chunk.strip().startswith("data: [ERROR]")
+            ):
+                collected_tokens.append(
+                    chunk[6:].rstrip("\n")
+                )
+
             yield chunk
 
-        # Once streaming is done, persist the full assistant response
         full_response = "".join(collected_tokens)
+
         if full_response:
             memory.add_message(
-                session_id=session_id, role="assistant", content=full_response
+                session_id=session_id,
+                role="assistant",
+                content=full_response
             )
 
     return StreamingResponse(
