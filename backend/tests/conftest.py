@@ -42,6 +42,20 @@ def override_get_current_user():
 
 app.dependency_overrides[get_current_user] = override_get_current_user
 
+@pytest.fixture(scope="session", autouse=True)
+def setup_database():
+    from app.database.database import Base, engine
+    # Make sure models are imported so they are registered with Base
+    from app.models.ticket import Ticket
+    from app.models.chat_message import ChatMessage
+    from app.models.user import User
+    
+    # Create tables
+    Base.metadata.create_all(bind=engine)
+    yield
+    # Optionally drop tables or let them be for the next run
+    # Base.metadata.drop_all(bind=engine)
+
 
 @pytest.fixture(autouse=True)
 def mock_core_services(mocker):
