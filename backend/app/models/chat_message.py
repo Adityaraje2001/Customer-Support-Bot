@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime, timezone
 from sqlalchemy import Column, String, Text, DateTime
-from app.database.session import Base
+from app.database.database import Base
 
 class ChatMessage(Base):
     __tablename__ = "chat_messages"

@@ -29,6 +29,13 @@ app.add_middleware(
 async def root():
     return {"message": "Welcome to AI Customer Support Agent API"}
 
+@app.on_event("startup")
+def on_startup():
+    from app.database.database import Base, engine
+    from app.models.ticket import Ticket  # noqa: F401 — registers model with Base
+    from app.models.chat_message import ChatMessage  # noqa: F401 — registers model with Base
+    Base.metadata.create_all(bind=engine)
+
 app.include_router(router, prefix="/api")
 
 if __name__ == "__main__":

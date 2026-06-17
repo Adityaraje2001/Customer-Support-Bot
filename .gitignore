@@ -39,7 +39,11 @@ build/
 *.sqlite3
 *.db
 backend/vectorstore/
+backend/vectorstores/
 backend/data/
+
+# Uploaded files & storage
+backend/storage/
 
 # Logs
 logs/
@@ -54,3 +58,15 @@ logs/
 # OS
 .DS_Store
 Thumbs.db
+
+# Coverage / CI artifacts
+.coverage
+coverage.xml
+htmlcov/
+*.db
+*_ci.db
+test_*.db
+.pytest_cache/
+
+# Frontend local env
+frontend/.env.local

@@ -1,9 +1,6 @@
 '''This is memory manger we will use right now lanngraph memory module to store memory of agent but in future we will use datastores to store it in sql db , datastore will help to fetch relavant memory for a perticular conversation and based on that it will help to generate response'''
-from app.database.session import SessionLocal, engine, Base
+from app.database.database import SessionLocal
 from app.models.chat_message import ChatMessage
-
-# Create tables on import (safe to call multiple times)
-Base.metadata.create_all(bind=engine)
 
 class MemoryManager:
     def add_message(self, session_id, role, content):

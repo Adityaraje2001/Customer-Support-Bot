@@ -1,0 +1,92 @@
+name: CI — Backend Tests
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  pull_request:
+    branches:
+      - main
+      - develop
+
+# Cancel in-progress runs on the same branch/PR to save CI minutes
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Run Test Suite (Python 3.11)
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: backend   # All commands run from the backend/ folder
+
+    env:
+      # ── Fake credentials so imports that call os.environ.get() don't fail ──
+      GROQ_API_KEY: "ci-placeholder-not-a-real-key"
+      DATABASE_URL: "sqlite:///./test_support_agent.db"
+      VECTOR_STORE_PATH: "./vectorstore"
+      DATABRICKS_HOST: "https://ci-placeholder.azuredatabricks.net"
+      DATABRICKS_TOKEN: "ci-placeholder-token"
+      MLFLOW_TRACKING_URI: "sqlite:///./mlflow_ci.db"
+      # Prevent sentence-transformers from downloading any models at runtime
+      TRANSFORMERS_OFFLINE: "1"
+      HF_DATASETS_OFFLINE: "1"
+
+    steps:
+      # ── 1. Checkout ─────────────────────────────────────────────────────────
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # ── 2. Set up Python 3.11 (matches Dockerfile base image) ───────────────
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+          cache-dependency-path: |
+            backend/requirements.txt
+            backend/requirements-dev.txt
+
+      # ── 3. Install production dependencies ───────────────────────────────────
+      #   delta-spark / databricks / mlflow are large and unused in unit tests;
+      #   we pin them so pip resolves the tree but does NOT attempt to execute them.
+      - name: Install production dependencies
+        run: pip install --no-cache-dir -r requirements.txt
+
+      # ── 4. Install testing / dev dependencies ────────────────────────────────
+      - name: Install testing dependencies
+        run: pip install --no-cache-dir -r requirements-dev.txt
+
+      # ── 5. Install coverage reporter ─────────────────────────────────────────
+      - name: Install coverage tools
+        run: pip install --no-cache-dir pytest-cov coverage
+
+      # ── 6. Run full test suite ───────────────────────────────────────────────
+      - name: Run unit, API and workflow tests (verbose)
+        run: |
+          pytest -v \
+            --tb=short \
+            --strict-markers \
+            tests/
+
+      # ── 7. Run coverage report ───────────────────────────────────────────────
+      - name: Run coverage report
+        run: |
+          pytest --cov=app \
+            --cov-report=term-missing \
+            --cov-report=xml:coverage.xml \
+            --cov-fail-under=75 \
+            tests/
+
+      # ── 8. Upload coverage artifact ──────────────────────────────────────────
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-report
+          path: backend/coverage.xml
+          retention-days: 14

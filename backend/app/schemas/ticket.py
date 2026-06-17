@@ -1,10 +1,15 @@
 from pydantic import BaseModel
-from typing import Optional
 
-# Validation schemas for support tickets
-# TODO: Align fields with actual DB/Databricks table schema.
 
-class TicketCreate(BaseModel):
-    title: str
-    description: str
-    priority: Optional[str] = "low"
+class TicketResponse(BaseModel):
+    id: int
+    session_id: str
+    question: str
+    status: str
+
+    class Config:
+        from_attributes = True
+
+
+class UpdateTicketStatusRequest(BaseModel):
+    status: str
