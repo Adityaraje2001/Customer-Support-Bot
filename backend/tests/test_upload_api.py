@@ -54,7 +54,7 @@ def test_upload_success(client, mocker):
     assert data["chunks_created"] == 20
 
     mock_file_service.upload_file.assert_called_once()
-    mock_pipeline.ingest_pdf.assert_called_once_with(pdf_path="/tmp/test.pdf")
+    mock_pipeline.ingest_pdf.assert_called_once_with(pdf_path="/tmp/test.pdf", user_id=1)
 
 
 def test_upload_file_service_error(client, mocker):

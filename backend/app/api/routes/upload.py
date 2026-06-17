@@ -1,5 +1,9 @@
-from fastapi import APIRouter, File, HTTPException
+from fastapi import APIRouter, File, HTTPException, Depends
 from fastapi import UploadFile as FastAPIUploadFile
+
+from app.auth.dependencies import get_current_user
+from app.auth.rbac import require_customer
+from app.models.user import User
 
 from app.services.file_service import FileService
 from app.schemas.upload import UploadResponse
@@ -19,7 +23,8 @@ router = APIRouter(
 
 @router.post("/", response_model=UploadResponse)
 async def upload_document(
-    file: FastAPIUploadFile = File(...)
+    file: FastAPIUploadFile = File(...),
+    current_user: User = Depends(require_customer)
 ):
     """
     Upload a PDF and automatically ingest it into the RAG knowledge base.
@@ -47,7 +52,8 @@ async def upload_document(
     # Step 3: Ingest PDF
     try:
         summary = ingestion_pipeline.ingest_pdf(
-            pdf_path=result["file_path"]
+            pdf_path=result["file_path"],
+            user_id=current_user.id
         )
 
     except Exception as e:

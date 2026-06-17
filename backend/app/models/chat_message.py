@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime, timezone
-from sqlalchemy import Column, String, Text, DateTime
+from sqlalchemy import Column, String, Text, DateTime, Integer
 from app.database.database import Base
 
 class ChatMessage(Base):
@@ -11,6 +11,9 @@ class ChatMessage(Base):
     
     # Groups messages into conversations; indexed for fast queries
     session_id = Column(String, index=True, nullable=False)
+    
+    # Ownership (nullable for backwards compat)
+    user_id = Column(Integer, index=True, nullable=True)
     
     # "user", "assistant", or "system"
     role = Column(String, nullable=False)

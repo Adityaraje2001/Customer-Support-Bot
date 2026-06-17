@@ -7,7 +7,8 @@ class TicketService:
     def create_ticket(
         self,
         session_id: str,
-        question: str
+        question: str,
+        user_id: int = None
     ):
 
         db = SessionLocal()
@@ -17,7 +18,8 @@ class TicketService:
             ticket = Ticket(
                 session_id=session_id,
                 question=question,
-                status="open"
+                status="open",
+                user_id=user_id
             )
 
             db.add(ticket)
@@ -75,14 +77,15 @@ class TicketService:
         finally:
             db.close()
 
-    def get_ticket(self, ticket_id: int):
+    def get_user_tickets(self, user_id: int):
         db = SessionLocal()
 
         try:
             return (
                 db.query(Ticket)
-                .filter(Ticket.id == ticket_id)
-                .first()
+                .filter(Ticket.user_id == user_id)
+                .order_by(Ticket.created_at.desc())
+                .all()
             )
 
         finally:

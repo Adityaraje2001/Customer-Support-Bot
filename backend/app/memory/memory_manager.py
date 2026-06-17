@@ -3,7 +3,7 @@ from app.database.database import SessionLocal
 from app.models.chat_message import ChatMessage
 
 class MemoryManager:
-    def add_message(self, session_id, role, content):
+    def add_message(self, session_id, role, content, user_id=None):
         """
         Adds a new message to the database for the given session.
         """
@@ -12,7 +12,8 @@ class MemoryManager:
             message = ChatMessage(
                 session_id=session_id,
                 role=role,
-                content=content
+                content=content,
+                user_id=user_id
             )
             db.add(message)
             db.commit()

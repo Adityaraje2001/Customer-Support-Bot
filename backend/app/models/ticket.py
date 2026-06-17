@@ -22,6 +22,12 @@ class Ticket(Base):
         nullable=False
     )
 
+    user_id = Column(
+        Integer,
+        index=True,
+        nullable=True
+    )
+
     question = Column(
         String,
         nullable=False

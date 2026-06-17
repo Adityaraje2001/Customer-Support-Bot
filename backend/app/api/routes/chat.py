@@ -2,7 +2,7 @@
 
 import uuid
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from fastapi.responses import StreamingResponse
 
 from app.schemas.chat import ChatRequest, ChatResponse
@@ -10,6 +10,9 @@ from app.memory.memory_manager import MemoryManager
 from app.services.llm_service import LLMService
 from app.services.question_rewriter import QuestionRewriter
 from app.workflows.support_workflow import graph
+from app.auth.dependencies import get_current_user
+from app.auth.rbac import require_customer
+from app.models.user import User
 
 
 router = APIRouter()
@@ -32,7 +35,10 @@ memory = MemoryManager()
 # =====================================================
 
 @router.post("/chat", response_model=ChatResponse)
-async def chat(request: ChatRequest):
+async def chat(
+    request: ChatRequest,
+    current_user: User = Depends(require_customer)
+):
     try:
         # Create or reuse session
         session_id = request.session_id or str(uuid.uuid4())
@@ -51,7 +57,8 @@ async def chat(request: ChatRequest):
             {
                 "question": rewritten_question,
                 "history": history,
-                "session_id": session_id
+                "session_id": session_id,
+                "user_id": current_user.id
             }
         )
 
@@ -61,14 +68,16 @@ async def chat(request: ChatRequest):
         memory.add_message(
             session_id=session_id,
             role="user",
-            content=request.message
+            content=request.message,
+            user_id=current_user.id
         )
 
         # Save assistant response
         memory.add_message(
             session_id=session_id,
             role="assistant",
-            content=response_text
+            content=response_text,
+            user_id=current_user.id
         )
 
         return ChatResponse(
@@ -88,7 +97,10 @@ async def chat(request: ChatRequest):
 # =====================================================
 
 @router.post("/chat/stream")
-async def chat_stream(request: ChatRequest):
+async def chat_stream(
+    request: ChatRequest,
+    current_user: User = Depends(require_customer)
+):
     """
     Legacy streaming endpoint.
 
@@ -103,7 +115,8 @@ async def chat_stream(request: ChatRequest):
     memory.add_message(
         session_id=session_id,
         role="user",
-        content=request.message
+        content=request.message,
+        user_id=current_user.id
     )
 
     async def _generate():
@@ -132,7 +145,8 @@ async def chat_stream(request: ChatRequest):
             memory.add_message(
                 session_id=session_id,
                 role="assistant",
-                content=full_response
+                content=full_response,
+                user_id=current_user.id
             )
 
     return StreamingResponse(
