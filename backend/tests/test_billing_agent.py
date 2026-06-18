@@ -26,13 +26,14 @@ def billing_agent(mock_rag_service):
 
 def test_run(billing_agent, mock_rag_service):
     # Arrange
-    mock_rag_service.answer_question.return_value = "This is a billing answer."
+    mock_rag_service.answer_question.return_value = ("This is a billing answer.", {"eval_score": 0.9})
 
     # Act
-    response = billing_agent.run(question="Where is my invoice?", history=[])
+    answer, metrics = billing_agent.run(question="Where is my invoice?", history=[])
 
     # Assert
-    assert response == "This is a billing answer."
+    assert answer == "This is a billing answer."
+    assert metrics == {"eval_score": 0.9}
     mock_rag_service.answer_question.assert_called_once_with(
         question="Where is my invoice?",
         history=[]
