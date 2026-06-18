@@ -53,7 +53,7 @@ async def upload_document(
     try:
         summary = ingestion_pipeline.ingest_pdf(
             pdf_path=result["file_path"],
-            user_id=current_user.id
+            user_id=current_user.id  # type: ignore
         )
 
     except Exception as e:

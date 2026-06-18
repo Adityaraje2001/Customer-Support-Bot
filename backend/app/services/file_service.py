@@ -7,13 +7,13 @@ class FileService:
 
     #method upload_file to which when triggered should return filename and status as completed
 
-    async def upload_file(self,file:UploadFile):
+    async def upload_file(self,file:UploadFile) -> dict[str, str]:
         try:
             validate_pdf = await self.validate_pdf(file)
             if validate_pdf["status"] == "failed":
                 return validate_pdf
             else:
-                filename = await self.generate_unique_filename(file.filename)
+                filename = await self.generate_unique_filename(file.filename or "uploaded_file.pdf")
                 save_file = await self.save_file(file,filename)
                 if save_file["status"] == "failed":
                     return save_file
@@ -22,7 +22,7 @@ class FileService:
         except Exception as e:
             return {"status":"failed","error":str(e)}   
     
-    async def validate_pdf(self,file:UploadFile):
+    async def validate_pdf(self,file:UploadFile) -> dict[str, str]:
         if file.content_type != "application/pdf":
             return {"status":"failed","error":"Invalid file type. Please upload a PDF file."}
         return {"status":"completed"} 
@@ -31,7 +31,7 @@ class FileService:
         stem, ext = filename.rsplit(".", 1)
         return f"{stem}_{uuid.uuid4()}.{ext}"
     
-    async def save_file(self,file:UploadFile,filename:str)->str:
+    async def save_file(self,file:UploadFile,filename:str)->dict[str, str]:
         try:
             uploads_dir = Path("storage/uploads")
             uploads_dir.mkdir(parents=True, exist_ok=True)

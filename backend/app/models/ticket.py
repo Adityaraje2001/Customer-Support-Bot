@@ -5,7 +5,7 @@ from sqlalchemy import DateTime
 
 from app.database.database import Base
 
-from datetime import datetime
+from datetime import datetime, timezone
 
 
 class Ticket(Base):
@@ -40,5 +40,5 @@ class Ticket(Base):
 
     created_at = Column(
         DateTime,
-        default=datetime.utcnow
+        default=lambda: datetime.now(timezone.utc)
     )

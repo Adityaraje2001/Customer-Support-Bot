@@ -8,7 +8,7 @@ class TicketService:
         self,
         session_id: str,
         question: str,
-        user_id: int = None
+        user_id: int | None = None
     ):
 
         db = SessionLocal()
@@ -66,7 +66,7 @@ class TicketService:
             if not ticket:
                 return None
 
-            ticket.status = status
+            setattr(ticket, "status", status)
 
             db.commit()
 

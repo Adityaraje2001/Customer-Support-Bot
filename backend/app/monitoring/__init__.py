@@ -1,2 +1,2 @@
 # Observability and monitoring module
-# TODO: Integrate MLflow tracing, Databricks telemetry, or open-telemetry
+# MLflow tracking via Databricks Tracking Server

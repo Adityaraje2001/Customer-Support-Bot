@@ -30,7 +30,7 @@ async def get_my_tickets(
     current_user: User = Depends(require_customer)
 ):
     """Get all tickets for the authenticated customer."""
-    return ticket_service.get_user_tickets(current_user.id)
+    return ticket_service.get_user_tickets(current_user.id)  # type: ignore
 
 
 @router.get("/open", response_model=list[TicketResponse])

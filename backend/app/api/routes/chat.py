@@ -1,6 +1,7 @@
 """Chat API routes with SQLite-backed conversation memory."""
 
 import uuid
+import time
 
 from fastapi import APIRouter, HTTPException, Depends
 from fastapi.responses import StreamingResponse
@@ -13,6 +14,8 @@ from app.workflows.support_workflow import graph
 from app.auth.dependencies import get_current_user
 from app.auth.rbac import require_customer
 from app.models.user import User
+from app.monitoring.mlflow_tracker import mlflow_tracker
+from app.evaluation.evaluator import ResponseEvaluator
 
 
 router = APIRouter()
@@ -27,6 +30,8 @@ question_rewriter = QuestionRewriter(
     llm_service=llm_service
 )
 
+evaluator = ResponseEvaluator(llm_service)
+
 memory = MemoryManager()
 
 
@@ -39,6 +44,7 @@ async def chat(
     request: ChatRequest,
     current_user: User = Depends(require_customer)
 ):
+    start_time = time.perf_counter()
     try:
         # Create or reuse session
         session_id = request.session_id or str(uuid.uuid4())
@@ -63,6 +69,40 @@ async def chat(
         )
 
         response_text = result["answer"]
+        retrieved_context = result.get("retrieved_context", "")
+        route_selected = result.get("route", "unknown")
+
+        # Evaluate response
+        eval_start = time.perf_counter()
+        try:
+            evaluation_scores = evaluator.evaluate(
+                question=rewritten_question,
+                answer=response_text,
+                retrieved_context=retrieved_context,
+                route_selected=route_selected
+            )
+        except Exception:
+            evaluation_scores = None
+        evaluation_latency = time.perf_counter() - eval_start
+
+        # Calculate latency
+        total_response_latency = time.perf_counter() - start_time
+
+        # Track with MLflow
+        mlflow_tracker.track_chat_interaction(
+            question=rewritten_question,
+            route_selected=route_selected,
+            session_id=session_id,
+            user_id=current_user.id,  # type: ignore
+            retrieved_document_count=result.get("retrieved_doc_count", 0),
+            retrieval_latency_ms=result.get("retrieval_latency", 0.0) * 1000,
+            llm_latency_ms=result.get("llm_latency", 0.0) * 1000,
+            total_response_latency_ms=total_response_latency * 1000,
+            evaluation_latency_ms=evaluation_latency * 1000,
+            response_length=len(response_text),
+            ticket_created=result.get("ticket_created", False),
+            evaluation_scores=evaluation_scores
+        )
 
         # Save original user message
         memory.add_message(
@@ -82,7 +122,8 @@ async def chat(
 
         return ChatResponse(
             response=response_text,
-            session_id=session_id
+            session_id=session_id,
+            agent_used=result.get("route")
         )
 
     except Exception as e:

@@ -58,11 +58,12 @@ def setup_database():
 
 
 @pytest.fixture(autouse=True)
-def mock_core_services(mocker):
+def mock_core_services():
     """Automatically mock core service *methods* to prevent real calls in every test."""
-    mocker.patch('app.services.llm_service.LLMService.get_response', return_value='Mocked LLM Response')
-    mocker.patch('app.rag.embeddings.EmbeddingService.embed_text', return_value=[0.1] * 384)
-    mocker.patch('app.rag.retriever.Retriever.retrieve', return_value=[])
+    with patch('app.services.llm_service.LLMService.get_response', return_value='Mocked LLM Response'), \
+         patch('app.rag.embeddings.EmbeddingService.embed_text', return_value=[0.1] * 384), \
+         patch('app.rag.retriever.Retriever.retrieve', return_value=[]):
+        yield
 
 
 @pytest.fixture

@@ -12,7 +12,7 @@ class TicketAgent:
         self,
         question: str,
         session_id: str,
-        user_id: int = None
+        user_id: int | None = None
     ):
         question_lower = question.lower()
 
@@ -127,7 +127,7 @@ class TicketAgent:
         self,
         question: str,
         session_id: str,
-        user_id: int = None
+        user_id: int | None = None
     ):
         ticket = self.ticket_service.create_ticket(
             session_id=session_id,
