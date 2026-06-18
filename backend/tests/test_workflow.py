@@ -29,7 +29,7 @@ def test_route_decision():
 def test_graph_invoke_support(mocker):
     # Arrange
     mocker.patch("app.workflows.support_workflow.router_agent.route", return_value="support")
-    mocker.patch("app.workflows.support_workflow.support_agent.run", return_value="Support response")
+    mocker.patch("app.workflows.support_workflow.support_agent.run", return_value=("Support response", {}))
 
     # Act
     result = graph.invoke({
@@ -46,7 +46,7 @@ def test_graph_invoke_support(mocker):
 def test_graph_invoke_billing(mocker):
     # Arrange
     mocker.patch("app.workflows.support_workflow.router_agent.route", return_value="billing")
-    mocker.patch("app.workflows.support_workflow.billing_agent.run", return_value="Billing response")
+    mocker.patch("app.workflows.support_workflow.billing_agent.run", return_value=("Billing response", {}))
 
     # Act
     result = graph.invoke({
