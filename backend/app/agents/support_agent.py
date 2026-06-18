@@ -11,7 +11,8 @@ class SupportAgent:
         question: str,
         history=None
     ):
-        return self.rag_service.answer_question(
+        answer, metrics = self.rag_service.answer_question(
             question=question,
             history=history
         )
+        return answer, metrics

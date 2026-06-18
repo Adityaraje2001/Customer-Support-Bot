@@ -1,4 +1,5 @@
 """AI Customer Support Agent — FastAPI application entry point."""
+import logging
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -7,6 +8,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.router import router
+
+logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
 # Environment
@@ -20,12 +23,37 @@ load_dotenv(dotenv_path=env_path)
 # ---------------------------------------------------------------------------
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Run one-time startup tasks (DB table creation)."""
+    """Run one-time startup tasks (DB table creation, MLflow validation)."""
+    # --- Database ----------------------------------------------------------
     from app.database.database import Base, engine
     from app.models.ticket import Ticket         # noqa: F401 — registers model
     from app.models.chat_message import ChatMessage  # noqa: F401
     from app.models.user import User             # noqa: F401
     Base.metadata.create_all(bind=engine)
+
+    # --- MLflow / Databricks -----------------------------------------------
+    from app.monitoring.mlflow_tracker import mlflow_tracker
+
+    status = mlflow_tracker.validate_connection()
+
+    if status["connection_verified"]:
+        logger.info(
+            "✅ Databricks MLflow tracking is ACTIVE — "
+            "experiment_id=%s, host=%s",
+            status["experiment_id"],
+            status["databricks_host"],
+        )
+    elif status["tracking_enabled"]:
+        logger.warning(
+            "⚠️  MLflow tracking enabled but connectivity unverified — %s",
+            status.get("reason", "unknown"),
+        )
+    else:
+        logger.warning(
+            "⚠️  MLflow tracking is DISABLED — %s",
+            status.get("reason", "Databricks not configured or unreachable"),
+        )
+
     yield
 
 

@@ -67,24 +67,32 @@ def router_node(state: AgentState):
 
 
 def support_node(state: AgentState):
-    answer = support_agent.run(
+    answer, metrics = support_agent.run(
         question=state["question"],
         history=state.get("history", [])
     )
 
     return {
-        "answer": answer
+        "answer": answer,
+        "retrieved_doc_count": metrics.get("retrieved_doc_count", 0),
+        "retrieval_latency": metrics.get("retrieval_latency", 0.0),
+        "llm_latency": metrics.get("llm_latency", 0.0),
+        "retrieved_context": metrics.get("retrieved_context", "")
     }
 
 
 def billing_node(state: AgentState):
-    answer = billing_agent.run(
+    answer, metrics = billing_agent.run(
         question=state["question"],
         history=state.get("history", [])
     )
 
     return {
-        "answer": answer
+        "answer": answer,
+        "retrieved_doc_count": metrics.get("retrieved_doc_count", 0),
+        "retrieval_latency": metrics.get("retrieval_latency", 0.0),
+        "llm_latency": metrics.get("llm_latency", 0.0),
+        "retrieved_context": metrics.get("retrieved_context", "")
     }
 
 
@@ -107,8 +115,11 @@ def ticket_node(state):
         user_id=state.get("user_id")
     )
 
+    ticket_created = "has been created successfully" in answer
+
     return {
-        "answer": answer
+        "answer": answer,
+        "ticket_created": ticket_created
     }
 
 
@@ -136,7 +147,7 @@ def route_decision(state: AgentState):
 # Build Graph
 # =====================================================
 
-workflow = StateGraph(AgentState)
+workflow = StateGraph(AgentState)  # type: ignore
 
 workflow.add_node(
     "router",

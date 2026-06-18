@@ -49,7 +49,7 @@ class AgentExecutor:
         elif route == "escalation":
             return escalation_agent.run(question,history)
         elif route == "ticket":
-            return ticket_agent.run(question,history)
+            return ticket_agent.run(question, str(history) if history else "default")
         else:
             return "Invalid route"
 
