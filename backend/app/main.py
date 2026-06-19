@@ -29,6 +29,18 @@ async def lifespan(app: FastAPI):
     from app.models.ticket import Ticket         # noqa: F401 — registers model
     from app.models.chat_message import ChatMessage  # noqa: F401
     from app.models.user import User             # noqa: F401
+    from app.models.document import Document     # noqa: F401
+    
+    # Startup Database Health Check
+    try:
+        from sqlalchemy import text
+        with engine.connect() as conn:
+            conn.execute(text("SELECT 1"))
+        logger.info("✅ Database connection verified successfully.")
+    except Exception as e:
+        logger.error(f"❌ Database connection failed: {e}")
+        raise e
+
     Base.metadata.create_all(bind=engine)
 
     # --- MLflow / Databricks -----------------------------------------------

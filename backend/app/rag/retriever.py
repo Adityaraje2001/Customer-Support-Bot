@@ -15,7 +15,13 @@ class Retriever:
     def retrieve(self, query: str,top_k=5):
         retrieved_documents = []
         query_embedding = self.embedding_service.embed_text(query)
-        results = self.vectorstore.search(query_embedding,n_results=top_k)
+        where_filter = {
+            "$and": [
+                {"status": "active"},
+                {"is_active": True}
+            ]
+        }
+        results = self.vectorstore.search(query_embedding, n_results=top_k, where=where_filter)
         documents = results["documents"][0]
         metadatas = results["metadatas"][0]
         distances = results["distances"][0]

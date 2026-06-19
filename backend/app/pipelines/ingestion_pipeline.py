@@ -68,6 +68,7 @@ class IngestionPipeline:
         pdf_path: str,
         document_id: str | None = None,
         user_id: int | None = None,
+        metadata_overrides: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         """Ingest a single PDF document into the vector store.
 
@@ -205,6 +206,9 @@ class IngestionPipeline:
 
                 if user_id is not None:
                     metadata["user_id"] = user_id
+
+                if metadata_overrides:
+                    metadata.update(metadata_overrides)
 
                 try:
                     self.vectorstore.add(

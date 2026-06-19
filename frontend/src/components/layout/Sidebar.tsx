@@ -7,7 +7,9 @@ import {
   Ticket, 
   User, 
   Shield, 
-  BarChart 
+  BarChart,
+  History,
+  BookOpen
 } from 'lucide-react';
 
 const Sidebar: React.FC = () => {
@@ -19,7 +21,9 @@ const Sidebar: React.FC = () => {
     { name: 'Chat', path: '/chat', icon: MessageSquare, roles: ['customer', 'admin'] },
     { name: 'My Tickets', path: '/my-tickets', icon: Ticket, roles: ['customer', 'admin'] },
     { name: 'Admin Tickets', path: '/admin/tickets', icon: Shield, roles: ['admin'] },
+    { name: 'Knowledge Base', path: '/admin/knowledge-base', icon: BookOpen, roles: ['admin'] },
     { name: 'Analytics', path: '/admin/analytics', icon: BarChart, roles: ['admin'] },
+    { name: 'Conversations', path: '/conversations', icon: History, roles: ['customer', 'admin'] },
     { name: 'Profile', path: '/profile', icon: User, roles: ['customer', 'admin'] },
   ];
 
