@@ -16,6 +16,7 @@ def test_extract_document_group():
     assert extract_document_group("terms_and_conditions_v10.pdf") == "terms_and_conditions"
 
 def test_document_lifecycle(client: TestClient):
+    import uuid
     # Override admin dependency
     from app.main import app
     app.dependency_overrides[require_admin] = lambda: User(id=1, email="admin@test.com", username="admin", role="admin")
@@ -33,18 +34,23 @@ def test_document_lifecycle(client: TestClient):
         with open(test_file_path, "wb") as f:
             f.write(b"%PDF-1.4 dummy content")
 
+        unique_id = uuid.uuid4().hex[:8]
+        filename_v1 = f"Refund_Policy_{unique_id}.pdf"
+        filename_v2 = f"Refund_Policy_New_{unique_id}.pdf"
+        expected_group = f"refund_policy_{unique_id}"
+
         try:
             # 1. Upload v1
             with open(test_file_path, "rb") as f:
                 response1 = client.post(
                     "/api/documents/upload",
-                    files={"file": ("Refund_Policy.pdf", f, "application/pdf")},
+                    files={"file": (filename_v1, f, "application/pdf")},
                     data={"document_type": "policy", "version": ""}
                 )
             
             assert response1.status_code == 200
             doc1 = response1.json()
-            assert doc1["document_group"] == "refund_policy"
+            assert doc1["document_group"] == expected_group
             assert doc1["version"] == "v1"
             assert doc1["status"] == "active"
             doc1_id = doc1["id"]
@@ -53,13 +59,13 @@ def test_document_lifecycle(client: TestClient):
             with open(test_file_path, "rb") as f:
                 response2 = client.post(
                     "/api/documents/upload",
-                    files={"file": ("Refund_Policy_New.pdf", f, "application/pdf")},
+                    files={"file": (filename_v2, f, "application/pdf")},
                     data={"document_type": "policy", "version": ""}
                 )
             
             assert response2.status_code == 200
             doc2 = response2.json()
-            assert doc2["document_group"] == "refund_policy"
+            assert doc2["document_group"] == expected_group
             assert doc2["version"] == "v2"
             assert doc2["status"] == "active"
             assert doc2["previous_version_id"] == doc1_id

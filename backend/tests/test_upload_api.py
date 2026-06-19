@@ -43,12 +43,15 @@ def test_upload_file_service_error(client, mocker):
 
 
 def test_upload_ingestion_error(client, mocker):
+    import uuid
     # Arrange
     mock_upload = mocker.patch("app.services.file_service.FileService.upload_file", new_callable=AsyncMock)
+    unique_id = uuid.uuid4().hex[:8]
+    filename = f"test_ingest_{unique_id}.pdf"
     mock_upload.return_value = {
         "status": "completed",
-        "file_path": "/tmp/test.pdf",
-        "filename": "test.pdf"
+        "file_path": f"/tmp/{filename}",
+        "filename": filename
     }
 
     mock_ingest = mocker.patch("app.pipelines.ingestion_pipeline.IngestionPipeline.ingest_pdf")
@@ -61,7 +64,7 @@ def test_upload_ingestion_error(client, mocker):
         from app.models.user import User
         app.dependency_overrides[require_admin] = lambda: User(id=1, email="admin@test.com", username="admin", role="admin")
         
-        response = client.post("/api/documents/upload", files={"file": ("test.pdf", f, "application/pdf")})
+        response = client.post("/api/documents/upload", files={"file": (filename, f, "application/pdf")})
         
         if require_admin in app.dependency_overrides:
             del app.dependency_overrides[require_admin]
