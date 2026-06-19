@@ -35,9 +35,9 @@ def test_document_lifecycle(client: TestClient):
             f.write(b"%PDF-1.4 dummy content")
 
         unique_id = uuid.uuid4().hex[:8]
-        filename_v1 = f"Refund_Policy_{unique_id}.pdf"
-        filename_v2 = f"Refund_Policy_New_{unique_id}.pdf"
-        expected_group = f"refund_policy_{unique_id}"
+        filename_v1 = f"{unique_id}_Refund_Policy.pdf"
+        filename_v2 = f"{unique_id}_Refund_Policy_New.pdf"
+        expected_group = f"{unique_id}_refund_policy"
 
         try:
             # 1. Upload v1
