@@ -89,6 +89,7 @@ def test_document_lifecycle(client: TestClient):
             rollback_response = client.post(f"/api/documents/{doc2_id}/rollback", json={"target_version_id": doc1_id})
             assert rollback_response.status_code == 200
             
+            db.expire_all()
             doc1_db = db.query(Document).filter(Document.id == doc1_id).first()
             assert doc1_db.status == "active"
             doc2_db = db.query(Document).filter(Document.id == doc2_id).first()
@@ -98,4 +99,5 @@ def test_document_lifecycle(client: TestClient):
         finally:
             if os.path.exists(test_file_path):
                 os.remove(test_file_path)
-            app.dependency_overrides.clear()
+            if require_admin in app.dependency_overrides:
+                del app.dependency_overrides[require_admin]

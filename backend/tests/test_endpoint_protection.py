@@ -17,7 +17,7 @@ class TestEndpointProtection:
 
     def test_upload_unauthorized(self, client):
         # We can just send an empty post to trigger 401 before any file validation
-        response = client.post("/api/upload/")
+        response = client.post("/api/documents/upload")
         assert response.status_code == 401
 
     def test_tickets_unauthorized(self, client):
