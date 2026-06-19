@@ -8,7 +8,9 @@ import {
   User, 
   Shield, 
   BarChart,
-  X
+  X,
+  History,
+  BookOpen
 } from 'lucide-react';
 
 interface MobileSidebarProps {
@@ -25,7 +27,9 @@ const MobileSidebar: React.FC<MobileSidebarProps> = ({ isOpen, setIsOpen }) => {
     { name: 'Chat', path: '/chat', icon: MessageSquare, roles: ['customer', 'admin'] },
     { name: 'My Tickets', path: '/my-tickets', icon: Ticket, roles: ['customer', 'admin'] },
     { name: 'Admin Tickets', path: '/admin/tickets', icon: Shield, roles: ['admin'] },
+    { name: 'Knowledge Base', path: '/admin/knowledge-base', icon: BookOpen, roles: ['admin'] },
     { name: 'Analytics', path: '/admin/analytics', icon: BarChart, roles: ['admin'] },
+    { name: 'Conversations', path: '/conversations', icon: History, roles: ['customer', 'admin'] },
     { name: 'Profile', path: '/profile', icon: User, roles: ['customer', 'admin'] },
   ];
 

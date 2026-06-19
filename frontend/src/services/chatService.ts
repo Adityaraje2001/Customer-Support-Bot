@@ -29,11 +29,34 @@ export const chatService = {
 
     const reader = response.body.getReader();
     const decoder = new TextDecoder('utf-8');
+    let buffer = '';
 
     while (true) {
       const { done, value } = await reader.read();
       if (done) break;
-      yield decoder.decode(value, { stream: true });
+      
+      buffer += decoder.decode(value, { stream: true });
+      const parts = buffer.split('\n\n');
+      buffer = parts.pop() || '';
+
+      for (const part of parts) {
+        if (part.startsWith('data: ')) {
+          const content = part.slice(6);
+          if (content.trim() === '[DONE]') {
+            return;
+          }
+          if (content.trim().startsWith('[ERROR]')) {
+            throw new Error(content);
+          }
+          try {
+            const token = JSON.parse(content);
+            yield token;
+          } catch (e) {
+            // Fallback for non-json data or legacy format
+            yield content;
+          }
+        }
+      }
     }
   },
 };

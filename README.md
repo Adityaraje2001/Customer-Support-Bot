@@ -9,7 +9,7 @@ Designed with future integrations for Databricks, Delta Lake, and MLflow.
 - **LLM**: Groq (openai/gpt-oss-120b)
 - **Vector DB**: ChromaDB with sentence-transformers
 - **Frontend**: Next.js
-- **Database**: SQLite
+- **Database**: PostgreSQL (Neon)
 
 ## Getting Started
 
@@ -19,4 +19,15 @@ Designed with future integrations for Databricks, Delta Lake, and MLflow.
 
 ```bash
 docker-compose up --build
+```
+
+### Database Migration (SQLite to PostgreSQL)
+
+To migrate your existing SQLite data to PostgreSQL:
+
+1. Configure your `DATABASE_URL` in `backend/.env` with your PostgreSQL connection string.
+2. Run the migration script:
+
+```bash
+python backend/scripts/migrate_sqlite_to_postgres.py
 ```

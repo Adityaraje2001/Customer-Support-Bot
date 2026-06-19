@@ -162,6 +162,7 @@ async def chat_stream(
 
     async def _generate():
 
+        import json
         collected_tokens = []
 
         async for chunk in llm_service.stream_response(
@@ -174,9 +175,12 @@ async def chat_stream(
                 and chunk.strip() != "data: [DONE]"
                 and not chunk.strip().startswith("data: [ERROR]")
             ):
-                collected_tokens.append(
-                    chunk[6:].rstrip("\n")
-                )
+                try:
+                    token = json.loads(chunk[6:].rstrip("\n"))
+                    collected_tokens.append(token)
+                except json.JSONDecodeError:
+                    # Fallback if it wasn't JSON encoded
+                    collected_tokens.append(chunk[6:].rstrip("\n"))
 
             yield chunk
 
