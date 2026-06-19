@@ -52,6 +52,7 @@ logs/
 # IDEs
 .idea/
 .vscode/
+.vs/
 *.swp
 *.swo
 
