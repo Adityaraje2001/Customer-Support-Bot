@@ -49,6 +49,7 @@ def setup_database():
     from app.models.ticket import Ticket
     from app.models.chat_message import ChatMessage
     from app.models.user import User
+    from app.models.feedback import Feedback
     
     # Create tables
     Base.metadata.create_all(bind=engine)

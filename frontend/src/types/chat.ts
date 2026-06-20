@@ -7,6 +7,7 @@ export interface ChatResponse {
   response: string;
   session_id: string;
   agent_used?: string;
+  message_id?: string;
 }
 
 export interface Message {
@@ -15,6 +16,9 @@ export interface Message {
   content: string;
   timestamp: string;
   agentUsed?: string;
+  messageId?: string;
+  sessionId?: string;
+  feedbackGiven?: 'helpful' | 'not_helpful' | null;
 }
 
 export interface Conversation {
@@ -23,3 +27,4 @@ export interface Conversation {
   updatedAt: string;
   messages: Message[];
 }
+

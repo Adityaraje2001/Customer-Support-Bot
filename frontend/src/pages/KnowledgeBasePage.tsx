@@ -36,6 +36,20 @@ const KnowledgeBasePage: React.FC = () => {
     fetchDocuments();
   }, []);
 
+  useEffect(() => {
+    const hasProcessingDocs = documents.some(doc => doc.status === 'pending' || doc.status === 'processing');
+    
+    if (hasProcessingDocs) {
+      const interval = setInterval(() => {
+        // Silent fetch for polling
+        knowledgeService.getAllDocuments()
+          .then(data => setDocuments(data))
+          .catch(err => console.error("Polling error:", err));
+      }, 5000);
+      return () => clearInterval(interval);
+    }
+  }, [documents]);
+
   const handleActivate = async (id: number) => {
     try {
       await knowledgeService.activateDocument(id);

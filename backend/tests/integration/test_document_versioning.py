@@ -80,6 +80,7 @@ def test_document_lifecycle(client: TestClient):
             # doc1 should now be archived
             db = SessionLocal()
             doc1_db = db.query(Document).filter(Document.id == doc1_id).first()
+            assert doc1_db is not None
             assert doc1_db.status == "archived"
 
             # 4. Check audit log
@@ -97,8 +98,10 @@ def test_document_lifecycle(client: TestClient):
             
             db.expire_all()
             doc1_db = db.query(Document).filter(Document.id == doc1_id).first()
+            assert doc1_db is not None
             assert doc1_db.status == "active"
             doc2_db = db.query(Document).filter(Document.id == doc2_id).first()
+            assert doc2_db is not None
             assert doc2_db.status == "archived"
 
             db.close()

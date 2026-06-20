@@ -11,13 +11,7 @@ class EmbeddingService:
 
     def embed_text(self, text: str) -> list[float]:
         try:
-            return self.model.encode(text)
+            return self.model.encode(text).tolist()
         except Exception as e:
             return []
     
-
-service = EmbeddingService()
-sentence_embedding = service.embed_text(
-    "How do I reset my password?"
-)
-print(sentence_embedding)

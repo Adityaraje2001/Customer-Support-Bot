@@ -8,6 +8,11 @@ from app.services.document_service import DocumentService
 from app.services.audit_service import AuditService
 from app.schemas.document import DocumentResponse, DocumentAuditResponse
 
+class DocumentStatusResponse(BaseModel):
+    status: str
+    chunk_count: int
+    error_message: str | None = None
+
 router = APIRouter(
     prefix="/documents",
     tags=["documents"]
@@ -50,6 +55,20 @@ def get_document(
 ):
     service = DocumentService(db)
     return service.get_document(document_id)
+
+@router.get("/{document_id}/status", response_model=DocumentStatusResponse)
+def get_document_status(
+    document_id: int,
+    current_user: User = Depends(require_admin),
+    db: Session = Depends(get_db)
+):
+    service = DocumentService(db)
+    doc = service.get_document(document_id)
+    return DocumentStatusResponse(
+        status=doc.status,
+        chunk_count=doc.chunk_count,
+        error_message=doc.error_message
+    )
 
 @router.get("/{document_id}/history", response_model=list[DocumentResponse])
 def get_document_history(

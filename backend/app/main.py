@@ -30,6 +30,7 @@ async def lifespan(app: FastAPI):
     from app.models.chat_message import ChatMessage  # noqa: F401
     from app.models.user import User             # noqa: F401
     from app.models.document import Document     # noqa: F401
+    from app.models.feedback import Feedback     # noqa: F401
     
     # Startup Database Health Check
     try:

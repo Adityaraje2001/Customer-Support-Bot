@@ -289,5 +289,56 @@ class MLflowTracker:
 
         return metadata
 
+    # ------------------------------------------------------------------
+    # Feedback tracking
+    # ------------------------------------------------------------------
+
+    def track_feedback(
+        self,
+        feedback_type: str,
+        route_selected: str,
+        session_id: str,
+        user_id: int | None = None,
+    ) -> None:
+        """Log user feedback to Databricks MLflow.
+
+        Creates a dedicated run named ``user_feedback`` so feedback
+        metrics can be aggregated separately from chat interactions.
+        """
+        if not self.tracking_enabled:
+            return
+
+        try:
+            import contextlib
+
+            run = self.start_run(run_name="user_feedback")
+            with run or contextlib.nullcontext():
+                # Params
+                self.log_param("feedback_type", feedback_type)
+                self.log_param("route_selected", route_selected)
+                self.log_param("session_id", session_id)
+                if user_id is not None:
+                    self.log_param("user_id", user_id)
+
+                # Metrics — binary indicators for easy aggregation
+                self.log_metric(
+                    "feedback_helpful",
+                    1.0 if feedback_type == "helpful" else 0.0,
+                )
+                self.log_metric(
+                    "feedback_not_helpful",
+                    1.0 if feedback_type == "not_helpful" else 0.0,
+                )
+
+                logger.info(
+                    "Feedback tracked — type=%s, route=%s",
+                    feedback_type,
+                    route_selected,
+                )
+        except Exception as e:
+            logger.warning(
+                "Failed to track feedback with MLflow: %s", e
+            )
+
 
 mlflow_tracker = MLflowTracker()

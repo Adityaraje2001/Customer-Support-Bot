@@ -89,10 +89,10 @@ class DocumentService:
             document_type=document_type,
             version=new_version,
             previous_version_id=previous_version_id,
-            status="active",
+            status="pending",
             file_path=file_path,
             uploaded_by=user_id,
-            is_active=True,
+            is_active=False,
             activated_at=datetime.now(timezone.utc),
             chunk_count=0
         )
@@ -104,27 +104,9 @@ class DocumentService:
         self.audit_service.log_action(new_document.id, "UPLOAD", user_id)
         self.audit_service.log_action(new_document.id, "ACTIVATE", user_id)
 
-        # Ingest Document
-        try:
-            summary = self.ingestion_pipeline.ingest_pdf(
-                pdf_path=file_path,
-                document_id=filename,
-                user_id=user_id,
-                metadata_overrides={"status": "active", "is_active": True, "db_document_id": new_document.id, "document_group": document_group}
-            )
-            
-            # Update DB with chunk count
-            new_document.chunk_count = summary["chunks_created"]
-            self.db.commit()
-            self.db.refresh(new_document)
-            
-        except Exception as e:
-            # If ingestion fails, we might want to soft delete or mark as failed
-            new_document.status = "deleted"
-            new_document.is_active = False
-            new_document.deleted_at = datetime.now(timezone.utc)
-            self.db.commit()
-            raise HTTPException(status_code=500, detail=f"Ingestion failed: {e}")
+        # Ingest Document Async
+        from app.tasks.document_tasks import process_document_task
+        process_document_task.delay(new_document.id)
 
         return new_document
 
