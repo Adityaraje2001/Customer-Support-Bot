@@ -52,7 +52,7 @@ def test_document_lifecycle(client: TestClient):
             doc1 = response1.json()
             assert doc1["document_group"] == expected_group
             assert doc1["version"] == "v1"
-            assert doc1["status"] == "active"
+            assert doc1["status"] == "pending"
             doc1_id = doc1["id"]
 
             # 2. Upload v2 (same group)
@@ -67,7 +67,7 @@ def test_document_lifecycle(client: TestClient):
             doc2 = response2.json()
             assert doc2["document_group"] == expected_group
             assert doc2["version"] == "v2"
-            assert doc2["status"] == "active"
+            assert doc2["status"] == "pending"
             assert doc2["previous_version_id"] == doc1_id
             doc2_id = doc2["id"]
 
