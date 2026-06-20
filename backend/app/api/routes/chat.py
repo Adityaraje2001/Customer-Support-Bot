@@ -49,6 +49,9 @@ async def chat(
         # Create or reuse session
         session_id = request.session_id or str(uuid.uuid4())
 
+        # Generate a unique message ID for this assistant response
+        message_id = str(uuid.uuid4())
+
         # Load conversation history
         history = memory.get_history(session_id)
 
@@ -117,13 +120,15 @@ async def chat(
             session_id=session_id,
             role="assistant",
             content=response_text,
-            user_id=current_user.id
+            user_id=current_user.id,
+            message_id=message_id
         )
 
         return ChatResponse(
             response=response_text,
             session_id=session_id,
-            agent_used=result.get("route")
+            agent_used=result.get("route"),
+            message_id=message_id,
         )
 
     except Exception as e:
@@ -132,73 +137,75 @@ async def chat(
             detail=str(e)
         )
 
-
 # =====================================================
-# Streaming Endpoint (Legacy)
+# Conversation History Endpoints
 # =====================================================
 
-@router.post("/chat/stream")
-async def chat_stream(
-    request: ChatRequest,
+@router.get("/conversations")
+async def get_conversations(
     current_user: User = Depends(require_customer)
 ):
     """
-    Legacy streaming endpoint.
-
-    Frontend currently uses /chat.
-    This endpoint is retained for future LangGraph streaming support.
+    Retrieves all conversations for the current user.
     """
+    try:
+        conversations = memory.get_conversations_for_user(current_user.id)
+        # We only want to return metadata, not all messages for the list view
+        for conv in conversations:
+            if "messages" in conv:
+                del conv["messages"]
+        return conversations
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=str(e)
+        )
 
-    session_id = request.session_id or str(uuid.uuid4())
+@router.get("/conversations/{session_id}/messages")
+async def get_conversation_messages(
+    session_id: str,
+    current_user: User = Depends(require_customer)
+):
+    """
+    Retrieves messages for a specific conversation session.
+    """
+    try:
+        conversations = memory.get_conversations_for_user(current_user.id)
+        for conv in conversations:
+            if conv["id"] == session_id:
+                return conv.get("messages", [])
+                
+        raise HTTPException(status_code=404, detail="Conversation not found")
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=str(e)
+        )
 
-    history = memory.get_history(session_id)
-
-    memory.add_message(
-        session_id=session_id,
-        role="user",
-        content=request.message,
-        user_id=current_user.id
-    )
-
-    async def _generate():
-
-        import json
-        collected_tokens = []
-
-        async for chunk in llm_service.stream_response(
-            request.message,
-            history=history
-        ):
-
-            if (
-                chunk.startswith("data: ")
-                and chunk.strip() != "data: [DONE]"
-                and not chunk.strip().startswith("data: [ERROR]")
-            ):
-                try:
-                    token = json.loads(chunk[6:].rstrip("\n"))
-                    collected_tokens.append(token)
-                except json.JSONDecodeError:
-                    # Fallback if it wasn't JSON encoded
-                    collected_tokens.append(chunk[6:].rstrip("\n"))
-
-            yield chunk
-
-        full_response = "".join(collected_tokens)
-
-        if full_response:
-            memory.add_message(
-                session_id=session_id,
-                role="assistant",
-                content=full_response,
-                user_id=current_user.id
-            )
-
-    return StreamingResponse(
-        _generate(),
-        media_type="text/event-stream",
-        headers={
-            "Cache-Control": "no-cache",
-            "X-Accel-Buffering": "no",
-        },
-    )
+@router.delete("/conversations/{session_id}")
+async def delete_conversation(
+    session_id: str,
+    current_user: User = Depends(require_customer)
+):
+    """
+    Deletes a specific conversation session and all its messages.
+    """
+    try:
+        # First verify the conversation belongs to the user
+        conversations = memory.get_conversations_for_user(current_user.id)
+        owns_conversation = any(conv["id"] == session_id for conv in conversations)
+        
+        if not owns_conversation:
+            raise HTTPException(status_code=404, detail="Conversation not found")
+            
+        memory.clear_session(session_id)
+        return {"status": "success", "message": "Conversation deleted"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=str(e)
+        )

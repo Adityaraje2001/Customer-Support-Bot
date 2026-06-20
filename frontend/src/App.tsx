@@ -15,6 +15,7 @@ import ConversationHistoryPage from './pages/ConversationHistoryPage';
 import AdminTicketsPage from './pages/AdminTicketsPage';
 import AnalyticsPage from './pages/AnalyticsPage';
 import KnowledgeBasePage from './pages/KnowledgeBasePage';
+import FeedbackPage from './pages/FeedbackPage';
 
 const App: React.FC = () => {
   return (
@@ -39,6 +40,7 @@ const App: React.FC = () => {
               <Route path="/admin/tickets" element={<AdminTicketsPage />} />
               <Route path="/admin/analytics" element={<AnalyticsPage />} />
               <Route path="/admin/knowledge-base" element={<KnowledgeBasePage />} />
+              <Route path="/admin/feedback" element={<FeedbackPage />} />
             </Route>
           </Route>
         </Route>

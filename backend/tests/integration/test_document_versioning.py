@@ -52,7 +52,7 @@ def test_document_lifecycle(client: TestClient):
             doc1 = response1.json()
             assert doc1["document_group"] == expected_group
             assert doc1["version"] == "v1"
-            assert doc1["status"] == "active"
+            assert doc1["status"] == "pending"
             doc1_id = doc1["id"]
 
             # 2. Upload v2 (same group)
@@ -67,7 +67,7 @@ def test_document_lifecycle(client: TestClient):
             doc2 = response2.json()
             assert doc2["document_group"] == expected_group
             assert doc2["version"] == "v2"
-            assert doc2["status"] == "active"
+            assert doc2["status"] == "pending"
             assert doc2["previous_version_id"] == doc1_id
             doc2_id = doc2["id"]
 
@@ -80,6 +80,7 @@ def test_document_lifecycle(client: TestClient):
             # doc1 should now be archived
             db = SessionLocal()
             doc1_db = db.query(Document).filter(Document.id == doc1_id).first()
+            assert doc1_db is not None
             assert doc1_db.status == "archived"
 
             # 4. Check audit log
@@ -97,8 +98,10 @@ def test_document_lifecycle(client: TestClient):
             
             db.expire_all()
             doc1_db = db.query(Document).filter(Document.id == doc1_id).first()
+            assert doc1_db is not None
             assert doc1_db.status == "active"
             doc2_db = db.query(Document).filter(Document.id == doc2_id).first()
+            assert doc2_db is not None
             assert doc2_db.status == "archived"
 
             db.close()

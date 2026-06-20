@@ -8,6 +8,7 @@ from app.api.routes.tickets import router as tickets_router
 from app.api.routes.auth import router as auth_router
 from app.api.routes.admin import router as admin_router
 from app.api.routes.documents import router as documents_router
+from app.api.routes.feedback import router as feedback_router
 
 router = APIRouter()
 
@@ -17,3 +18,4 @@ router.include_router(tickets_router)
 router.include_router(auth_router)
 router.include_router(admin_router)
 router.include_router(documents_router)
+router.include_router(feedback_router)

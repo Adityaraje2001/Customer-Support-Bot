@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { v4 as uuidv4 } from 'uuid';
+import toast from 'react-hot-toast';
 import ConversationSidebar from './ConversationSidebar';
 import ChatHeader from './ChatHeader';
 import ChatMessage from './ChatMessage';
@@ -7,7 +8,9 @@ import ChatInput from './ChatInput';
 import EmptyState from './EmptyState';
 import TypingIndicator from './TypingIndicator';
 import { chatService } from '../../services/chatService';
+import { feedbackService } from '../../services/feedbackService';
 import type { Message, Conversation } from '../../types/chat';
+import type { FeedbackCreate } from '../../types/feedback';
 
 const ChatContainer: React.FC = () => {
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -67,6 +70,97 @@ const ChatContainer: React.FC = () => {
     if (window.innerWidth < 768) setIsSidebarOpen(false);
   };
 
+  const handleFeedback = async (
+    messageId: string,
+    feedbackType: 'helpful' | 'not_helpful',
+    comment?: string,
+  ) => {
+    // Find the assistant message
+    const conversation = conversations.find(c => c.id === currentId);
+    if (!conversation) return;
+
+    const targetMsg = conversation.messages.find(m => m.id === messageId);
+    if (!targetMsg || targetMsg.role !== 'assistant') return;
+
+    // Find the user message that precedes this assistant message
+    const msgIndex = conversation.messages.indexOf(targetMsg);
+    const userMsg = conversation.messages
+      .slice(0, msgIndex)
+      .reverse()
+      .find(m => m.role === 'user');
+
+    const feedbackData: FeedbackCreate = {
+      session_id: targetMsg.sessionId || currentId || '',
+      message_id: targetMsg.messageId || targetMsg.id,
+      question: userMsg?.content || '',
+      answer: targetMsg.content,
+      route_selected: targetMsg.agentUsed,
+      feedback_type: feedbackType,
+      feedback_comment: comment || undefined,
+    };
+
+    try {
+      await feedbackService.submitFeedback(feedbackData);
+
+      // Mark as given in local state
+      setConversations(prev =>
+        prev.map(c => {
+          if (c.id !== currentId) return c;
+          return {
+            ...c,
+            messages: c.messages.map(m =>
+              m.id === messageId ? { ...m, feedbackGiven: feedbackType } : m,
+            ),
+          };
+        }),
+      );
+
+      toast.success('Thank you for your feedback!', {
+        duration: 3000,
+        style: {
+          borderRadius: '12px',
+          background: '#1f2937',
+          color: '#fff',
+          fontSize: '14px',
+        },
+      });
+    } catch (error: any) {
+      if (error?.response?.status === 409) {
+        toast.error('Feedback already submitted for this message.', {
+          duration: 3000,
+          style: {
+            borderRadius: '12px',
+            background: '#1f2937',
+            color: '#fff',
+            fontSize: '14px',
+          },
+        });
+        // Mark as given anyway so buttons disable
+        setConversations(prev =>
+          prev.map(c => {
+            if (c.id !== currentId) return c;
+            return {
+              ...c,
+              messages: c.messages.map(m =>
+                m.id === messageId ? { ...m, feedbackGiven: feedbackType } : m,
+              ),
+            };
+          }),
+        );
+      } else {
+        toast.error('Failed to submit feedback. Please try again.', {
+          duration: 3000,
+          style: {
+            borderRadius: '12px',
+            background: '#1f2937',
+            color: '#fff',
+            fontSize: '14px',
+          },
+        });
+      }
+    }
+  };
+
   const handleSendMessage = async (content: string) => {
     if (!content.trim()) return;
 
@@ -107,71 +201,51 @@ const ChatContainer: React.FC = () => {
 
     setIsLoading(true);
 
-    // Initial placeholder for assistant message
     const botMessageId = uuidv4();
-    const placeholderMsg: Message = {
-      id: botMessageId,
-      role: 'assistant',
-      content: '',
-      timestamp: new Date().toISOString(),
-    };
-
-    let assistantHasStarted = false;
 
     try {
-      // We pass targetConvId. The backend expects a string.
-      
-      const generator = chatService.streamChat({
+      // Use the non-streaming endpoint which runs the full LangGraph workflow
+      // (router → ticket/support/billing/escalation agents)
+      const response = await chatService.sendMessage({
         message: content,
         session_id: targetConvId, // Re-use the UI ID as session ID for simplicity
       });
 
-      for await (const chunk of generator) {
-        if (!assistantHasStarted) {
-          assistantHasStarted = true;
-          setConversations(prev => prev.map(c => {
-            if (c.id === targetConvId) {
-              return { ...c, messages: [...c.messages, placeholderMsg] };
-            }
-            return c;
-          }));
-        }
+      const botMessage: Message = {
+        id: botMessageId,
+        role: 'assistant',
+        content: response.response,
+        timestamp: new Date().toISOString(),
+        agentUsed: response.agent_used,
+        messageId: response.message_id || botMessageId,
+        sessionId: response.session_id || targetConvId,
+        feedbackGiven: null,
+      };
 
-        // Try to parse SSE chunks if backend sends SSE, or just raw text.
-        // Assuming raw text stream chunks here:
-        setConversations(prev => prev.map(c => {
-          if (c.id === targetConvId) {
-            const msgs = [...c.messages];
-            const lastIdx = msgs.length - 1;
-            if (msgs[lastIdx].id === botMessageId) {
-              msgs[lastIdx] = { ...msgs[lastIdx], content: msgs[lastIdx].content + chunk };
-            }
-            return { ...c, messages: msgs };
-          }
-          return c;
-        }));
-        scrollToBottom();
-      }
+      setConversations(prev => prev.map(c => {
+        if (c.id === targetConvId) {
+          return { ...c, messages: [...c.messages, botMessage] };
+        }
+        return c;
+      }));
+      scrollToBottom();
 
     } catch (error) {
-      console.error('Streaming error:', error);
-      // Fallback or error message
-      if (!assistantHasStarted) {
-        setConversations(prev => prev.map(c => {
-          if (c.id === targetConvId) {
-            return {
-              ...c,
-              messages: [...c.messages, {
-                id: botMessageId,
-                role: 'assistant',
-                content: 'Sorry, I encountered an error connecting to the server. Please try again.',
-                timestamp: new Date().toISOString(),
-              }]
-            };
-          }
-          return c;
-        }));
-      }
+      console.error('Chat error:', error);
+      setConversations(prev => prev.map(c => {
+        if (c.id === targetConvId) {
+          return {
+            ...c,
+            messages: [...c.messages, {
+              id: botMessageId,
+              role: 'assistant',
+              content: 'Sorry, I encountered an error connecting to the server. Please try again.',
+              timestamp: new Date().toISOString(),
+            }]
+          };
+        }
+        return c;
+      }));
     } finally {
       setIsLoading(false);
     }
@@ -205,7 +279,11 @@ const ChatContainer: React.FC = () => {
             ) : (
               <div className="space-y-6 pb-4">
                 {messages.map(msg => (
-                  <ChatMessage key={msg.id} message={msg} />
+                  <ChatMessage
+                    key={msg.id}
+                    message={msg}
+                    onFeedback={handleFeedback}
+                  />
                 ))}
                 
                 {isLoading && (

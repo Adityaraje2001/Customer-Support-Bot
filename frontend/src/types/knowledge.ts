@@ -6,7 +6,7 @@ export interface DocumentResponse {
   document_type: string;
   version: string;
   previous_version_id: number | null;
-  status: 'active' | 'archived' | 'deleted';
+  status: 'pending' | 'processing' | 'active' | 'archived' | 'deleted' | 'failed';
   file_path: string;
   chunk_count: number;
   uploaded_by: number;

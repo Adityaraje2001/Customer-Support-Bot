@@ -16,10 +16,7 @@ class Retriever:
         retrieved_documents = []
         query_embedding = self.embedding_service.embed_text(query)
         where_filter = {
-            "$and": [
-                {"status": "active"},
-                {"is_active": True}
-            ]
+            "status": "active"
         }
         results = self.vectorstore.search(query_embedding, n_results=top_k, where=where_filter)
         documents = results["documents"][0]
