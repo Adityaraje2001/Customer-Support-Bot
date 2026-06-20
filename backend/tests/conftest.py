@@ -43,6 +43,16 @@ def override_get_current_user():
 app.dependency_overrides[get_current_user] = override_get_current_user
 
 @pytest.fixture(scope="session", autouse=True)
+def setup_celery():
+    from app.celery_app import celery_app
+    celery_app.conf.update(
+        task_always_eager=True,
+        task_eager_propagates=False,
+    )
+    yield
+
+
+@pytest.fixture(scope="session", autouse=True)
 def setup_database():
     from app.database.database import Base, engine
     # Make sure models are imported so they are registered with Base
@@ -56,7 +66,6 @@ def setup_database():
     yield
     # Optionally drop tables or let them be for the next run
     # Base.metadata.drop_all(bind=engine)
-
 
 @pytest.fixture(autouse=True)
 def mock_core_services():

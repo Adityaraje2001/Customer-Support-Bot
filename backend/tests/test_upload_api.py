@@ -70,5 +70,17 @@ def test_upload_ingestion_error(client, mocker):
             del app.dependency_overrides[require_admin]
 
     # Assert
-    assert response.status_code == 500
-    assert "Ingestion failed: ChromaDB connection failed" in response.json()["detail"]
+    # Since ingestion is async via Celery, the endpoint returns 200 (pending).
+    # In tests, Celery runs eagerly, so the task executes synchronously and updates the DB.
+    assert response.status_code == 200
+    doc_id = response.json()["id"]
+
+    # The document status should have been updated to 'failed' by the background task
+    from app.database.database import SessionLocal
+    from app.models.document import Document
+    db = SessionLocal()
+    doc = db.query(Document).filter(Document.id == doc_id).first()
+    assert doc is not None, "Document should be saved in DB"
+    assert doc.status == "failed"
+    assert "ChromaDB connection failed" in doc.error_message
+    db.close()
